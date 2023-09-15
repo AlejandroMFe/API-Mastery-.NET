@@ -1,6 +1,6 @@
+
 var builder = WebApplication.CreateBuilder(args);
 
-var furnitureStoreSettings = builder.Configuration.GetSection("APIFurnitureStore").Get<APIFurnitureStoreSettings>();
 
 // Add services to the container.
 
@@ -9,9 +9,12 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.Configure<JwtConfig>(
+    builder.Configuration.GetSection(nameof(JwtConfig)));
+
 builder.Services.AddDbContext<APIFurnitureStoreContext>(options =>
             // options pass the configurations to the DbContext Class aka APIFurnitureStoreContext
-            options.UseSqlite(furnitureStoreSettings.ConnectionStrings));
+            options.UseSqlite(builder.Configuration.GetConnectionString("APIFurnitureStoreContext")));
 
 var app = builder.Build();
 
