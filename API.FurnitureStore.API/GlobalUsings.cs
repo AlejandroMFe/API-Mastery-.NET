@@ -4,3 +4,6 @@ global using Microsoft.AspNetCore.Mvc;
 global using API.FurnitureStore.Shared;
 global using API.FurnitureStore.API;
 global using API.FurnitureStore.API.Configuration;
+global using Microsoft.IdentityModel.Tokens;
+global using Microsoft.AspNetCore.Authentication.JwtBearer;
+global using System.Text;
