@@ -1,6 +1,4 @@
-﻿using API.FurnitureStore.Shared;
-
-namespace API.FurnitureStore.API.Controllers;
+﻿namespace API.FurnitureStore.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -20,7 +18,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> Get(int id)
+    public async Task<IActionResult> GetById(int id)
     {
         var product = await _context.Products.FirstOrDefaultAsync(x => x.Id == id);
 
@@ -28,6 +26,15 @@ public class ProductsController : ControllerBase
 
         return CreatedAtAction("Post", product.Id, product);
     }
+
+    [HttpGet("GetByCategory/{categoryId}")]
+    public async Task<IEnumerable<Product>> GetByCategory(int categoryId)
+    {
+       return await _context.Products
+                            .Where(p => p.ProductCategoryId == categoryId)
+                            .ToListAsync();
+    }
+
 
     [HttpPost]
     public async Task<IActionResult> Post(Product product)
