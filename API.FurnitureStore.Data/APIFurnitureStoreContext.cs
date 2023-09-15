@@ -1,6 +1,7 @@
-﻿namespace API.FurnitureStore.Data;
+﻿
+namespace API.FurnitureStore.Data;
 
-public class APIFurnitureStoreContext : DbContext
+public class APIFurnitureStoreContext : IdentityDbContext
 {
     public APIFurnitureStoreContext(DbContextOptions options) : base(options) { }
 
