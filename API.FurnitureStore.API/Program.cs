@@ -1,4 +1,6 @@
 
+using Microsoft.AspNetCore.Identity;
+
 var builder = WebApplication.CreateBuilder(args);
 
 
@@ -11,6 +13,10 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.Configure<JwtConfig>(
     builder.Configuration.GetSection(nameof(JwtConfig)));
+
+builder.Services.AddDbContext<APIFurnitureStoreContext>(options =>
+            // options pass the configurations to the DbContext Class aka APIFurnitureStoreContext
+            options.UseSqlite(builder.Configuration.GetConnectionString("APIFurnitureStoreContext")));
 
 builder.Services.AddAuthentication(options =>
 {
@@ -39,9 +45,9 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddDbContext<APIFurnitureStoreContext>(options =>
-            // options pass the configurations to the DbContext Class aka APIFurnitureStoreContext
-            options.UseSqlite(builder.Configuration.GetConnectionString("APIFurnitureStoreContext")));
+builder.Services.AddDefaultIdentity<IdentityUser>(options =>
+     options.SignIn.RequireConfirmedAccount = false)
+    .AddEntityFrameworkStores<APIFurnitureStoreContext>();
 
 var app = builder.Build();
 
