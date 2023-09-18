@@ -65,7 +65,7 @@ public class OrdersController : ControllerBase
         _context.OrderDetails.AddRange(order.OrderDetails);
 
         await _context.SaveChangesAsync();
-        
+
         return NoContent();
     }
 
@@ -85,6 +85,6 @@ public class OrdersController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return  NoContent();
+        return NoContent();
     }
 }

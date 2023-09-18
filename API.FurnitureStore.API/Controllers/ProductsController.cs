@@ -31,9 +31,9 @@ public class ProductsController : ControllerBase
     [HttpGet("GetByCategory/{categoryId}")]
     public async Task<IEnumerable<Product>> GetByCategory(int categoryId)
     {
-       return await _context.Products
-                            .Where(p => p.ProductCategoryId == categoryId)
-                            .ToListAsync();
+        return await _context.Products
+                             .Where(p => p.ProductCategoryId == categoryId)
+                             .ToListAsync();
     }
 
 

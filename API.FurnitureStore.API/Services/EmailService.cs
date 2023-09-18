@@ -1,4 +1,5 @@
 ﻿using MailKit.Net.Smtp;
+
 using MimeKit;
 
 namespace API.FurnitureStore.API.Services;

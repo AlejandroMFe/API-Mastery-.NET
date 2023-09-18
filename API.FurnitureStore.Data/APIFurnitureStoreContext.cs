@@ -21,6 +21,6 @@ public class APIFurnitureStoreContext : IdentityDbContext
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<OrderDetail>()
-            .HasKey(od => new {od.OrderId, od.ProductId});
+            .HasKey(od => new { od.OrderId, od.ProductId });
     }
 }
