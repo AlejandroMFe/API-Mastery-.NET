@@ -11,6 +11,7 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => {
+    // Add Authorization header to Swagger
     c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Furniture_Store_API",
@@ -40,6 +41,8 @@ builder.Services.AddSwaggerGen(c => {
 
 builder.Services.Configure<JwtConfig>(
     builder.Configuration.GetSection(nameof(JwtConfig)));
+builder.Services.Configure<SmtpSettings>(
+    builder.Configuration.GetSection(nameof(SmtpSettings)));
 
 builder.Services.AddDbContext<APIFurnitureStoreContext>(options =>
             // options pass the configurations to the DbContext Class aka APIFurnitureStoreContext
