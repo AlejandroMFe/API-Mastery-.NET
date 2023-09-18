@@ -1,5 +1,4 @@
-﻿
-namespace API.FurnitureStore.API.Controllers;
+﻿namespace API.FurnitureStore.API.Controllers;
 
 [Authorize]
 [Route("api/[controller]")]

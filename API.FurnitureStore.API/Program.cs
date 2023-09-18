@@ -1,4 +1,6 @@
 
+using API.FurnitureStore.API.Services;
+
 using Microsoft.AspNetCore.Identity;
 using Microsoft.OpenApi.Models;
 
@@ -10,7 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c => {
+builder.Services.AddSwaggerGen(c =>
+{
     // Add Authorization header to Swagger
     c.SwaggerDoc("v1", new OpenApiInfo
     {
@@ -39,14 +42,15 @@ builder.Services.AddSwaggerGen(c => {
     });
 });
 
-builder.Services.Configure<JwtConfig>(
-    builder.Configuration.GetSection(nameof(JwtConfig)));
-builder.Services.Configure<SmtpSettings>(
-    builder.Configuration.GetSection(nameof(SmtpSettings)));
-
 builder.Services.AddDbContext<APIFurnitureStoreContext>(options =>
             // options pass the configurations to the DbContext Class aka APIFurnitureStoreContext
             options.UseSqlite(builder.Configuration.GetConnectionString("APIFurnitureStoreContext")));
+
+builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection(nameof(JwtConfig)));
+
+/* Email */
+builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection(nameof(SmtpSettings)));
+builder.Services.AddSingleton<IEmailSender, EmailService>();
 
 builder.Services.AddAuthentication(options =>
 {

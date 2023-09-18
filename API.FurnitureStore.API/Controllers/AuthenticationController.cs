@@ -1,11 +1,9 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-
+using System.Text.Encodings.Web;
 using API.FurnitureStore.Shared.Auth;
-using API.FurnitureStore.Shared.DTOs;
-
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace API.FurnitureStore.API.Controllers;
 [Route("api/[controller]")]
@@ -13,12 +11,15 @@ namespace API.FurnitureStore.API.Controllers;
 public class AuthenticationController : ControllerBase
 {
     private readonly UserManager<IdentityUser> _userManager;
+    private readonly IEmailSender _emailSender;
     private readonly JwtConfig _jwtConfig;
 
     public AuthenticationController(UserManager<IdentityUser> userManager,
-                                    IOptions<JwtConfig> jwtConfig)
+                                    IOptions<JwtConfig> jwtConfig,
+                                    IEmailSender emailSender)
     {
         _userManager = userManager;
+        _emailSender = emailSender;
         _jwtConfig = jwtConfig.Value;
     }
 
@@ -36,6 +37,13 @@ public class AuthenticationController : ControllerBase
             {
                 Result = false,
                 Errors = new List<string>() { "Invalid Credentials" }
+            });
+
+        if (existingUser.EmailConfirmed is false)
+            return BadRequest(new AuthResult()
+            {
+                Result = false,
+                Errors = new List<string>() { "Email needs to be confirmed" }
             });
 
         // Check the user and password are okey
@@ -58,6 +66,38 @@ public class AuthenticationController : ControllerBase
         });
     }
 
+    [HttpGet("ConfirmEmail")]
+    public async Task<IActionResult> ConfirmEmail(string userId, string code)
+    {
+        // Validate userId and code
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(code))
+            return BadRequest(new AuthResult()
+            {
+                Result = false,
+                Errors = new List<string>() { "Invalid email confirmation url" }
+            });
+
+        var user = await _userManager.FindByIdAsync(userId);
+
+        if (user is null)
+            return BadRequest(new AuthResult()
+            {
+                Result = false,
+                Errors = new List<string>() { "User not found" }
+            });
+
+        // User exist go on
+
+        code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
+
+        var result = await _userManager.ConfirmEmailAsync(user, code);
+
+        var status = result.Succeeded ? "Email confirmed successfully" : "Error confirming your email";
+
+        return Ok(status);
+    }
+
+
     [HttpPost("Register")]
     public async Task<IActionResult> Register([FromBody] UserRegistrationRequestDto request)
     {
@@ -77,18 +117,19 @@ public class AuthenticationController : ControllerBase
         var user = new IdentityUser()
         {
             Email = request.EmailAddress,
-            UserName = request.EmailAddress
+            UserName = request.EmailAddress,
+            EmailConfirmed = false
         };
 
         var isCreated = await _userManager.CreateAsync(user, request.Password);
 
         if (isCreated.Succeeded)
         {
-            var token = GenerateToken(user);
+            await SendVerificationEmail(user);
+
             return Ok(new AuthResult()
             {
-                Result = true,
-                Token = token
+                Result = true
             });
         }
         else
@@ -103,13 +144,21 @@ public class AuthenticationController : ControllerBase
                 Errors = error
             });
         }
+    }
 
-        // Something went wrong
-        return BadRequest(new AuthResult()
-        {
-            Result = false,
-            Errors = new List<string>() { "User couldn´t be created" }
-        });
+    private async Task SendVerificationEmail(IdentityUser user)
+    {
+        var verificationCode = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+        verificationCode = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(verificationCode));
+
+        //                          server           controller     endpoint      query string = parameters
+        // example link: https//localhost:8080/api/authentication/ConfirmEmail/userId=exampleUserId&code=exampleCode
+        var callbackUrl = $@"{Request.Scheme}://{Request.Host}{Url.Action("ConfirmEmail",
+                                controller: "Authentication", new { userId = user.Id, code = verificationCode })}";
+
+        var emailBody = $"Please configm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'> clicking here! </a>";
+
+        await _emailSender.SendEmailAsync(user.Email, "Confirm your email", emailBody);
     }
 
     private string GenerateToken(IdentityUser user)
