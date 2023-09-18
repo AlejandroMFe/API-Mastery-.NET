@@ -1,5 +1,6 @@
 namespace API.FurnitureStore.API.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
 public class WeatherForecastController : ControllerBase

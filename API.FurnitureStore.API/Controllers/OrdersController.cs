@@ -1,5 +1,6 @@
 ﻿namespace API.FurnitureStore.API.Controllers;
 
+[Authorize]
 [Route("api/[controller]")]
 [ApiController]
 public class OrdersController : ControllerBase

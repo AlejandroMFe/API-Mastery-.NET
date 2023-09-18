@@ -1,7 +1,7 @@
-﻿using API.FurnitureStore.Shared;
-
+﻿
 namespace API.FurnitureStore.API.Controllers;
 
+[Authorize]
 [Route("api/[controller]")]
 [ApiController]
 public class ClientsController : ControllerBase
@@ -51,7 +51,7 @@ public class ClientsController : ControllerBase
     [HttpDelete]
     public async Task<IActionResult> Delete(Client client)
     {
-        if(client is null) return NotFound();
+        if (client is null) return NotFound();
 
         _context.Clients.Remove(client);
         await _context.SaveChangesAsync();

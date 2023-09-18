@@ -1,7 +1,6 @@
-﻿using API.FurnitureStore.Shared;
+﻿namespace API.FurnitureStore.API.Controllers;
 
-namespace API.FurnitureStore.API.Controllers;
-
+[Authorize]
 [Route("api/[controller]")]
 [ApiController]
 public class ProducCategoriesController : ControllerBase

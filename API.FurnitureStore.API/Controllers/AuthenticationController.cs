@@ -22,6 +22,42 @@ public class AuthenticationController : ControllerBase
         _jwtConfig = jwtConfig.Value;
     }
 
+    [HttpPost("Login")]
+    public async Task<IActionResult> Login([FromBody] UserLoginRequestDto request)
+    {
+        // Validate the parameters of the request
+        if (ModelState.IsValid is false) return BadRequest();
+
+        // Check if the user exist
+        var existingUser = await _userManager.FindByEmailAsync(request.Email);
+
+        if (existingUser is null)
+            return BadRequest(new AuthResult()
+            {
+                Result = false,
+                Errors = new List<string>() { "Invalid Credentials" }
+            });
+
+        // Check the user and password are okey
+        var checkUserAndPassword = await _userManager.CheckPasswordAsync(existingUser, request.Password);
+
+        if (checkUserAndPassword is false)
+            return BadRequest(new AuthResult()
+            {
+                Result = false,
+                Errors = new List<string>() { "Invalid Credentials" }
+            });
+
+        // Generate token
+        var token = GenerateToken(existingUser);
+
+        return Ok(new AuthResult()
+        {
+            Result = true,
+            Token = token
+        });
+    }
+
     [HttpPost("Register")]
     public async Task<IActionResult> Register([FromBody] UserRegistrationRequestDto request)
     {
@@ -44,7 +80,7 @@ public class AuthenticationController : ControllerBase
             UserName = request.EmailAddress
         };
 
-        var isCreated = await _userManager.CreateAsync(user);
+        var isCreated = await _userManager.CreateAsync(user, request.Password);
 
         if (isCreated.Succeeded)
         {
@@ -80,6 +116,7 @@ public class AuthenticationController : ControllerBase
     {
         var jwtHandler = new JwtSecurityTokenHandler();
 
+        // Get key
         var key = Encoding.UTF8.GetBytes(_jwtConfig.Secret);
 
         var tokenDescriptor = new SecurityTokenDescriptor()
@@ -94,11 +131,14 @@ public class AuthenticationController : ControllerBase
                 new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString()) // When the token was issued
             })),
             Expires = DateTime.UtcNow.AddHours(1),
+
+            // Sign the token
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
 
         var token = jwtHandler.CreateToken(tokenDescriptor);
 
-        return jwtHandler.WriteToken(token);    
+        // token to string
+        return jwtHandler.WriteToken(token);
     }
 }
