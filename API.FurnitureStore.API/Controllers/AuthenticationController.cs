@@ -179,7 +179,7 @@ public class AuthenticationController : ControllerBase
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // Unique identifier for the token
                 new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString()) // When the token was issued
             })),
-            Expires = DateTime.UtcNow.AddHours(1),
+            Expires = DateTime.UtcNow.Add(_jwtConfig.ExpiryTime),
 
             // Sign the token
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)

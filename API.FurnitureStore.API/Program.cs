@@ -52,6 +52,24 @@ builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection(nameof(Jw
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection(nameof(SmtpSettings)));
 builder.Services.AddSingleton<IEmailSender, EmailService>();
 
+var key = Encoding.ASCII.GetBytes(builder.Configuration.GetSection("JwtConfig:Secret").Value);
+var tokenValidationParameters = new TokenValidationParameters()
+{
+    ValidateIssuerSigningKey = true,
+    IssuerSigningKey = new SymmetricSecurityKey(key),
+
+    // Issuer is how emitted the token
+    // in production this will be true
+    ValidateIssuer = false,
+
+    // Audience is how recieved the token
+    ValidateAudience = false,
+    RequireExpirationTime = false,
+    ValidateLifetime = true
+};
+
+builder.Services.AddSingleton(tokenValidationParameters);
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -60,23 +78,8 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(jwt =>
 {
-    var key = Encoding.ASCII.GetBytes(builder.Configuration.GetSection("JwtConfig:Secret").Value);
-
     jwt.SaveToken = true;
-    jwt.TokenValidationParameters = new TokenValidationParameters()
-    {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-
-        // Issuer is how emitted the token
-        // in production this will be true
-        ValidateIssuer = false,
-
-        // Audience is how recieved the token
-        ValidateAudience = false,
-        RequireExpirationTime = false,
-        ValidateLifetime = true
-    };
+    jwt.TokenValidationParameters = tokenValidationParameters;
 });
 
 builder.Services.AddDefaultIdentity<IdentityUser>(options =>
