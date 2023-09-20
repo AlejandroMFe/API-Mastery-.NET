@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 
 using API.FurnitureStore.Shared.Auth;
+using API.FurnitureStore.Shared.Common;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
@@ -14,14 +15,17 @@ public class AuthenticationController : ControllerBase
 {
     private readonly UserManager<IdentityUser> _userManager;
     private readonly IEmailSender _emailSender;
+    private readonly APIFurnitureStoreContext _context;
     private readonly JwtConfig _jwtConfig;
 
     public AuthenticationController(UserManager<IdentityUser> userManager,
                                     IOptions<JwtConfig> jwtConfig,
-                                    IEmailSender emailSender)
+                                    IEmailSender emailSender,
+                                    APIFurnitureStoreContext context)
     {
         _userManager = userManager;
         _emailSender = emailSender;
+        _context = context;
         _jwtConfig = jwtConfig.Value;
     }
 
@@ -58,14 +62,9 @@ public class AuthenticationController : ControllerBase
                 Errors = new List<string>() { "Invalid Credentials" }
             });
 
-        // Generate token
         var token = GenerateToken(existingUser);
 
-        return Ok(new AuthResult()
-        {
-            Result = true,
-            Token = token
-        });
+        return Ok(token);
     }
 
     [HttpGet("ConfirmEmail")]
@@ -163,7 +162,7 @@ public class AuthenticationController : ControllerBase
         await _emailSender.SendEmailAsync(user.Email, "Confirm your email", emailBody);
     }
 
-    private string GenerateToken(IdentityUser user)
+    private async Task<AuthResult> GenerateToken(IdentityUser user)
     {
         var jwtHandler = new JwtSecurityTokenHandler();
 
@@ -188,8 +187,28 @@ public class AuthenticationController : ControllerBase
         };
 
         var token = jwtHandler.CreateToken(tokenDescriptor);
+        
+        var jwtToken = jwtHandler.WriteToken(token);
 
-        // token to string
-        return jwtHandler.WriteToken(token);
+        var refreshToken = new RefreshToken
+        {
+            JwtId = token.Id,
+            Token = RandomGenerator.GenerateRandomString(23),
+            AddedDate = DateTime.UtcNow,
+            ExpiryDate = DateTime.UtcNow.AddMonths(6),
+            IsRevoked = false,
+            IsUsed = false,
+            UserId = user.Id
+        };
+
+        await _context.RefreshTokens.AddAsync(refreshToken);
+        await _context.SaveChangesAsync();
+
+        return new AuthResult
+        {
+            Token = jwtToken,
+            RefreshToken = refreshToken.Token,
+            Result = true
+        };
     }
 }
