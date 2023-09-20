@@ -1,5 +1,4 @@
-﻿
-namespace API.FurnitureStore.Data;
+﻿namespace API.FurnitureStore.Data;
 
 public class APIFurnitureStoreContext : IdentityDbContext
 {

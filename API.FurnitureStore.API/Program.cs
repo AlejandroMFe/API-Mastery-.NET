@@ -1,9 +1,4 @@
 
-using API.FurnitureStore.API.Services;
-
-using Microsoft.AspNetCore.Identity;
-using Microsoft.OpenApi.Models;
-
 var builder = WebApplication.CreateBuilder(args);
 
 
@@ -52,6 +47,7 @@ builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection(nameof(Jw
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection(nameof(SmtpSettings)));
 builder.Services.AddSingleton<IEmailSender, EmailService>();
 
+/* Token */
 var key = Encoding.ASCII.GetBytes(builder.Configuration.GetSection("JwtConfig:Secret").Value);
 var tokenValidationParameters = new TokenValidationParameters()
 {

@@ -12,3 +12,6 @@ global using Microsoft.AspNetCore.Mvc;
 global using Microsoft.EntityFrameworkCore;
 global using Microsoft.Extensions.Options;
 global using Microsoft.IdentityModel.Tokens;
+global using API.FurnitureStore.API.Services;
+global using Microsoft.AspNetCore.Identity;
+global using Microsoft.OpenApi.Models;
