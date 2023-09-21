@@ -16,17 +16,20 @@ public class AuthenticationController : ControllerBase
     private readonly UserManager<IdentityUser> _userManager;
     private readonly IEmailSender _emailSender;
     private readonly APIFurnitureStoreContext _context;
+    private readonly TokenValidationParameters _tokenValidationParameters;
     private readonly JwtConfig _jwtConfig;
 
     public AuthenticationController(UserManager<IdentityUser> userManager,
                                     IOptions<JwtConfig> jwtConfig,
                                     IEmailSender emailSender,
-                                    APIFurnitureStoreContext context)
+                                    APIFurnitureStoreContext context,
+                                    TokenValidationParameters tokenValidationParameters)
     {
         _userManager = userManager;
         _emailSender = emailSender;
         _context = context;
         _jwtConfig = jwtConfig.Value;
+        _tokenValidationParameters = tokenValidationParameters;
     }
 
     [HttpPost("Login")]
@@ -62,10 +65,33 @@ public class AuthenticationController : ControllerBase
                 Errors = new List<string>() { "Invalid Credentials" }
             });
 
-        var token = GenerateToken(existingUser);
+        var token = GenerateTokenAsync(existingUser);
 
         return Ok(token);
     }
+
+    [HttpPost("RefreshToken")]
+    public async Task<IActionResult> RefreshToken([FromBody] TokenRequest tokenRequest)
+    {
+        if (ModelState.IsValid is false)
+            return BadRequest(new AuthResult
+            {
+                Errors = new List<string>() { "Invalid parameters" },
+                Result = false
+            });
+
+        var results = await VerifyAndGenerateTokenAsync(tokenRequest);
+
+        if (results is null)
+            return BadRequest(new AuthResult
+            {
+                Errors = new List<string>() { "Invalid tokens" },
+                Result = false
+            });
+
+        return Ok(results);
+    }
+
 
     [HttpGet("ConfirmEmail")]
     public async Task<IActionResult> ConfirmEmail(string userId, string code)
@@ -162,7 +188,7 @@ public class AuthenticationController : ControllerBase
         await _emailSender.SendEmailAsync(user.Email, "Confirm your email", emailBody);
     }
 
-    private async Task<AuthResult> GenerateToken(IdentityUser user)
+    private async Task<AuthResult> GenerateTokenAsync(IdentityUser user)
     {
         var jwtHandler = new JwtSecurityTokenHandler();
 
@@ -187,7 +213,7 @@ public class AuthenticationController : ControllerBase
         };
 
         var token = jwtHandler.CreateToken(tokenDescriptor);
-        
+
         var jwtToken = jwtHandler.WriteToken(token);
 
         var refreshToken = new RefreshToken
@@ -210,5 +236,73 @@ public class AuthenticationController : ControllerBase
             RefreshToken = refreshToken.Token,
             Result = true
         };
+    }
+
+    private async Task<AuthResult> VerifyAndGenerateTokenAsync(TokenRequest tokenRequest)
+    {
+        var jwtHandler = new JwtSecurityTokenHandler();
+
+        try
+        {
+            _tokenValidationParameters.ValidateLifetime = false;
+
+            // Validate Token Parameters
+            var tokenBeingVerified = jwtHandler.ValidateToken(tokenRequest.Token, _tokenValidationParameters, out var validatedToken);
+
+            if (tokenBeingVerified is null)
+                throw new Exception("Invalid Token");
+
+            if (validatedToken is JwtSecurityToken jwtSecurityToken)
+            {
+                // Validate the algorithm with which the token was signed
+                var result = jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase);
+
+                if (result is false)
+                    throw new Exception("Invalid Token");
+            }
+
+            // Validate Expiry Date
+            var utnExpiryDate = long.Parse(tokenBeingVerified.Claims.FirstOrDefault(t => t.Type == JwtRegisteredClaimNames.Exp).Value);
+
+            var expiryDate = DateTimeOffset.FromUnixTimeSeconds(utnExpiryDate).UtcDateTime;
+
+            if (expiryDate < DateTime.UtcNow)
+                throw new Exception("Token Expired");
+
+            // Validate Stored Token
+            var storedToken = await _context.RefreshTokens.FirstOrDefaultAsync(x => x.Token == tokenRequest.RefreshToken);
+
+            if (storedToken is null)
+                throw new Exception("Invalid Token");
+
+            if (storedToken.IsUsed || storedToken.IsRevoked)
+                throw new Exception("Invalid Token");
+
+            // Validate Token Id
+            var jti = tokenBeingVerified.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
+
+            if (jti != storedToken.JwtId)
+                throw new Exception("Invalid Token");
+
+            // Validate Expiry Date of the stored token
+            if (storedToken.ExpiryDate < DateTime.UtcNow)
+                throw new Exception("Invalid Token");
+
+            // Here we know that the Token is Valid and it´s is being used
+            storedToken.IsUsed = true;
+            _context.RefreshTokens.Update(storedToken);
+            await _context.SaveChangesAsync();
+
+            // Generate a new token
+            var dbUser = await _userManager.FindByIdAsync(storedToken.UserId);
+            return await GenerateTokenAsync(dbUser);
+        }
+        catch (Exception e)
+        {
+            var message = e.Message == "Invalid Token" || e.Message == "Token Expired"
+                ? e.Message
+                : "Internal Server Error";
+            return new AuthResult { Errors = new List<string> { message }, Result = false };
+        }
     }
 }
