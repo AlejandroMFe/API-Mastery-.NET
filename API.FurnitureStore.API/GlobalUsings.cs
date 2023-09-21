@@ -15,3 +15,5 @@ global using Microsoft.IdentityModel.Tokens;
 global using API.FurnitureStore.API.Services;
 global using Microsoft.AspNetCore.Identity;
 global using Microsoft.OpenApi.Models;
+global using NLog.Web;
+global using NLog;

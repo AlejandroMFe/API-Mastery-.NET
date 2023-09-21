@@ -5,7 +5,6 @@ using System.Text.Encodings.Web;
 using API.FurnitureStore.Shared.Auth;
 using API.FurnitureStore.Shared.Common;
 
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace API.FurnitureStore.API.Controllers;
@@ -17,19 +16,22 @@ public class AuthenticationController : ControllerBase
     private readonly IEmailSender _emailSender;
     private readonly APIFurnitureStoreContext _context;
     private readonly TokenValidationParameters _tokenValidationParameters;
+    private readonly ILogger<AuthenticationController> _logger;
     private readonly JwtConfig _jwtConfig;
 
     public AuthenticationController(UserManager<IdentityUser> userManager,
                                     IOptions<JwtConfig> jwtConfig,
                                     IEmailSender emailSender,
                                     APIFurnitureStoreContext context,
-                                    TokenValidationParameters tokenValidationParameters)
+                                    TokenValidationParameters tokenValidationParameters,
+                                    ILogger<AuthenticationController> logger)
     {
         _userManager = userManager;
         _emailSender = emailSender;
         _context = context;
         _jwtConfig = jwtConfig.Value;
         _tokenValidationParameters = tokenValidationParameters;
+        _logger = logger;
     }
 
     [HttpPost("Login")]
@@ -128,6 +130,8 @@ public class AuthenticationController : ControllerBase
     [HttpPost("Register")]
     public async Task<IActionResult> Register([FromBody] UserRegistrationRequestDto request)
     {
+        _logger.LogWarning("A user is trying to register");
+
         if (ModelState.IsValid is false) return BadRequest();
 
         // Verify if the email is already taken
